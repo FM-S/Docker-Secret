@@ -1,0 +1,94 @@
+version: '3.7'
+
+
+services:
+ 
+ 
+   database:
+     image: mysql:8.0
+     command: '--default-authentication-plugin=mysql_native_password'
+
+
+     volumes: 
+     - mydata:/var/lib/mysql/
+    
+     ports: 
+      - 3306:3306
+     secrets:
+      - wordpress-user
+      - wordpress-db 
+      - my-pass
+      - wp-pass
+
+     environment: 
+      MYSQL_USER_FILE           : /run/secrets/wordpress-user
+      MYSQL_PASSWORD_FILE       : /run/secrets/wp-pass
+      MYSQL_DATABASE_FILE       : /run/secrets/wordpress-db
+      MYSQL_ROOT_PASSWORD_FILE  : /run/secrets/my-pass
+
+
+   wordpress:
+    image: wordpress
+    depends_on: 
+     - database
+
+    deploy:
+     replicas : 1 
+     resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+    volumes: 
+    - mywp:/var/www/html/
+  
+    ports: 
+    - 80:80
+
+    secrets:
+    - wordpress-user
+    - wordpress-db
+    - wp-pass
+    environment: 
+      WORDPRESS_DB_HOST           : database:3306 
+      WORDPRESS_DB_NAME_FILE      : /run/secrets/wordpress-db
+      WORDPRESS_DB_USER_FILE      : /run/secrets/wordpress-user
+      WORDPRESS_DB_PASSWORD_FILE  : /run/secrets/wp-pass
+     
+
+
+   phpmyadmin:
+     image: phpmyadmin/phpmyadmin:latest
+
+     depends_on: 
+      - database
+      - wordpress
+        
+     ports: 
+      - 8080:80
+
+     secrets:
+      - wordpress-user
+      - wp-pass
+
+     environment: 
+      PMA_HOST              :  database:3306 
+      MYSQL_USER_FILE       :  /run/secrets/wordpress-user
+      MYSQL_PASSWORD_FILE   :  /run/secrets/wp-pass
+
+ 
+secrets:
+  wordpress-user:
+   file: ./wp-user.txt
+  wp-pass:
+   file: ./wp-pass.txt
+  my-pass:
+   file: ./my-pass.txt
+  wordpress-db:
+   file: ./wp-db.txt
+ 
+
+ 
+volumes: 
+  mywp: {}
+  mydata: {}
